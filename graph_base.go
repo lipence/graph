@@ -6,21 +6,21 @@ import (
 	"github.com/tidwall/hashmap"
 )
 
-type baseGraph struct {
+type baseGraph[ID comparable] struct {
 	lock  sync.RWMutex
 	nodes hashmap.Set[ID]
 	edges hashmap.Map[[2]ID, Weight]
 }
 
-func (g *baseGraph) exportNodes() []ID { return g.nodes.Keys() }
+func (g *baseGraph[ID]) exportNodes() []ID { return g.nodes.Keys() }
 
-func (g *baseGraph) countNodes() int { return g.nodes.Len() }
+func (g *baseGraph[ID]) countNodes() int { return g.nodes.Len() }
 
-func (g *baseGraph) checkNode(id ID) bool {
+func (g *baseGraph[ID]) checkNode(id ID) bool {
 	return g.nodes.Contains(id)
 }
 
-func (g *baseGraph) addNode(id ID) bool {
+func (g *baseGraph[ID]) addNode(id ID) bool {
 	if g.nodes.Contains(id) {
 		return false
 	}
@@ -28,7 +28,7 @@ func (g *baseGraph) addNode(id ID) bool {
 	return true
 }
 
-func (g *baseGraph) deleteNode(id ID) bool {
+func (g *baseGraph[ID]) deleteNode(id ID) bool {
 	if !g.nodes.Contains(id) {
 		return false
 	} else {
@@ -37,11 +37,11 @@ func (g *baseGraph) deleteNode(id ID) bool {
 	}
 }
 
-func (g *baseGraph) getEdge(src, tgt ID) (Weight, bool) {
+func (g *baseGraph[ID]) getEdge(src, tgt ID) (Weight, bool) {
 	return g.edges.Get([2]ID{src, tgt})
 }
 
-func (g *baseGraph) addEdge(src, tgt ID, w Weight) bool {
+func (g *baseGraph[ID]) addEdge(src, tgt ID, w Weight) bool {
 	var edgeKey = [2]ID{src, tgt}
 	if isOK(g.edges.Get(edgeKey)) {
 		return false
@@ -50,11 +50,11 @@ func (g *baseGraph) addEdge(src, tgt ID, w Weight) bool {
 	return true
 }
 
-func (g *baseGraph) setEdge(src, tgt ID, w Weight) {
+func (g *baseGraph[ID]) setEdge(src, tgt ID, w Weight) {
 	g.edges.Set([2]ID{src, tgt}, w)
 }
 
-func (g *baseGraph) deleteEdge(src, tgt ID) bool {
+func (g *baseGraph[ID]) deleteEdge(src, tgt ID) bool {
 	var edgeKey = [2]ID{src, tgt}
 	if !isOK(g.edges.Get(edgeKey)) {
 		return false

@@ -13,12 +13,9 @@ const (
 var ErrUndefinedNode = errors.New("undefined node")
 var ErrEdgeConflicts = errors.New("edge conflicts")
 
-type (
-	ID     string
-	Weight uint64
-)
+type Weight uint64
 
-type Graph interface {
+type Graph[ID comparable] interface {
 	Nodes() []ID
 	NodesLen() int
 	CheckNode(id ID) bool
@@ -32,10 +29,10 @@ type Graph interface {
 	DeleteEdge(src, tgt ID) bool
 }
 
-type Runtime struct {
-	graph Graph
+type Runtime[ID comparable] struct {
+	graph Graph[ID]
 }
 
-func NewRuntime(graph Graph) *Runtime {
-	return &Runtime{graph: graph}
+func NewRuntime[ID comparable](graph Graph[ID]) *Runtime[ID] {
+	return &Runtime[ID]{graph: graph}
 }

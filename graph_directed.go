@@ -8,8 +8,8 @@ import (
 	"github.com/tidwall/hashmap"
 )
 
-type directedGraph struct {
-	baseGraph
+type directedGraph[ID comparable] struct {
+	baseGraph[ID]
 	opexCount    uint64
 	cacheLock    sync.Mutex
 	cachedOpex   uint64
@@ -17,11 +17,13 @@ type directedGraph struct {
 	cacheByTgtID hashmap.Map[ID, *hashmap.Set[ID]]
 }
 
-func (g *directedGraph) checkEdgeNodes(src, tgt ID) bool {
+func NewDirected[ID comparable]() *directedGraph[ID] { return &directedGraph[ID]{} }
+
+func (g *directedGraph[ID]) checkEdgeNodes(src, tgt ID) bool {
 	return g.baseGraph.checkNode(src) && g.baseGraph.checkNode(tgt)
 }
 
-func (g *directedGraph) checkEdgeNodesWithErr(src, tgt ID) error {
+func (g *directedGraph[ID]) checkEdgeNodesWithErr(src, tgt ID) error {
 	if !g.baseGraph.checkNode(src) {
 		return fmt.Errorf("%w: id = %v", ErrUndefinedNode, src)
 	}
@@ -31,7 +33,7 @@ func (g *directedGraph) checkEdgeNodesWithErr(src, tgt ID) error {
 	return nil
 }
 
-func (g *directedGraph) guaranteeCached() (cm, pm hashmap.Map[ID, *hashmap.Set[ID]]) {
+func (g *directedGraph[ID]) guaranteeCached() (cm, pm hashmap.Map[ID, *hashmap.Set[ID]]) {
 	g.cacheLock.Lock()
 	defer g.cacheLock.Unlock()
 	if currentOpex := g.opexCount; g.cachedOpex == currentOpex {
@@ -63,7 +65,7 @@ func (g *directedGraph) guaranteeCached() (cm, pm hashmap.Map[ID, *hashmap.Set[I
 	return cm, pm
 }
 
-func (g *directedGraph) exportCache() (children, parents map[ID][]ID) {
+func (g *directedGraph[ID]) exportCache() (children, parents map[ID][]ID) {
 	var cm, pm = g.guaranteeCached()
 	children, parents = map[ID][]ID{}, map[ID][]ID{}
 	cm.Scan(func(i ID, s *hashmap.Set[ID]) bool {
@@ -77,7 +79,7 @@ func (g *directedGraph) exportCache() (children, parents map[ID][]ID) {
 	return children, parents
 }
 
-func (g *directedGraph) ChildrenOf(id ID) ([]ID, bool) {
+func (g *directedGraph[ID]) ChildrenOf(id ID) ([]ID, bool) {
 	if !g.checkNode(id) {
 		return nil, false
 	}
@@ -89,7 +91,7 @@ func (g *directedGraph) ChildrenOf(id ID) ([]ID, bool) {
 	}
 }
 
-func (g *directedGraph) ParentsOf(id ID) ([]ID, bool) {
+func (g *directedGraph[ID]) ParentsOf(id ID) ([]ID, bool) {
 	if !g.checkNode(id) {
 		return nil, false
 	}
@@ -101,35 +103,35 @@ func (g *directedGraph) ParentsOf(id ID) ([]ID, bool) {
 	}
 }
 
-func (g *directedGraph) Nodes() []ID {
+func (g *directedGraph[ID]) Nodes() []ID {
 	return g.baseGraph.exportNodes()
 }
-func (g *directedGraph) NodesLen() int {
+func (g *directedGraph[ID]) NodesLen() int {
 	return g.baseGraph.countNodes()
 }
 
-func (g *directedGraph) AddNode(id ID) bool {
+func (g *directedGraph[ID]) AddNode(id ID) bool {
 	atomic.AddUint64(&g.opexCount, 1)
 	return g.baseGraph.addNode(id)
 }
 
-func (g *directedGraph) DeleteNode(id ID) bool {
+func (g *directedGraph[ID]) DeleteNode(id ID) bool {
 	atomic.AddUint64(&g.opexCount, 1)
 	return g.baseGraph.deleteNode(id)
 }
 
-func (g *directedGraph) CheckNode(id ID) bool {
+func (g *directedGraph[ID]) CheckNode(id ID) bool {
 	return g.baseGraph.checkNode(id)
 }
 
-func (g *directedGraph) GetEdge(src, tgt ID) (Weight, bool) {
+func (g *directedGraph[ID]) GetEdge(src, tgt ID) (Weight, bool) {
 	if !g.checkEdgeNodes(src, tgt) {
 		return 0, false
 	}
 	return g.baseGraph.getEdge(src, tgt)
 }
 
-func (g *directedGraph) AddEdge(src, tgt ID, w Weight) error {
+func (g *directedGraph[ID]) AddEdge(src, tgt ID, w Weight) error {
 	if err := g.checkEdgeNodesWithErr(src, tgt); err != nil {
 		return err
 	}
@@ -140,7 +142,7 @@ func (g *directedGraph) AddEdge(src, tgt ID, w Weight) error {
 	return nil
 }
 
-func (g *directedGraph) SetEdge(src, tgt ID, w Weight) error {
+func (g *directedGraph[ID]) SetEdge(src, tgt ID, w Weight) error {
 	if err := g.checkEdgeNodesWithErr(src, tgt); err != nil {
 		return err
 	}
@@ -149,7 +151,7 @@ func (g *directedGraph) SetEdge(src, tgt ID, w Weight) error {
 	return nil
 }
 
-func (g *directedGraph) DeleteEdge(src, tgt ID) bool {
+func (g *directedGraph[ID]) DeleteEdge(src, tgt ID) bool {
 	if !g.checkEdgeNodes(src, tgt) {
 		return false
 	}
